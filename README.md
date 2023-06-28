@@ -220,18 +220,44 @@ Everything should just work (I use MacOS as my dev machine).
 
 ---
 
-### Donations
+### Building for Macs with Apple Silicon (M1 etc) with Homebrew
+choose proper qt version:  sudo ln -s /opt/homebrew/Cellar/qt/6.3.1_1/bin/qmake /opt/local/bin/qmake
 
-Sure!  Send **BCH** here:
+When I tried the instructions for building with modern Macs I had some
+issues. But I managed to work around them. Here is what I did:
 
-[bitcoincash:qphax4s4n9h60jxj2fkrjs35w2tvgd4wzvf52cgtzc](bitcoincash:qphax4s4n9h60jxj2fkrjs35w2tvgd4wzvf52cgtzc)
+1. Install dependencies by running:
 
-[![bitcoincash:qphax4s4n9h60jxj2fkrjs35w2tvgd4wzvf52cgtzc](https://raw.githubusercontent.com/cculianu/DonateSpareChange/master/donate.png)](bitcoincash:qphax4s4n9h60jxj2fkrjs35w2tvgd4wzvf52cgtzc)
+  `brew install qt rocksdb`
 
-You may also send **BTC** to the BTC-equivalent of the above address, which is: **`1BCHBCH6TXBaXyc5HReLBm1sNytBF2kkPD`**
+  As instructed you need qt to build. I also encountered an issue when trying
+  to build the bundled rocksdb that comes with the repo.
 
----
+2. Modify `Fulcrum.pro` by simply making sure that, proper mac os version:
 
-### Sponsors
+  `QMAKE_MACOSX_DEPLOYMENT_TARGET = 13.2`
 
-![General Protocols](https://c3-soft.com/imgs/general-protocols.png)
+  Without this in place compilation with fail with an error like:
+
+  `error: 'path' is unavailable: introduced in macOS 10.15`
+
+3. Build and compile Fulcrum by executing:
+
+  `qmake LIBS=-lrocksdb INCLUDEPATH=/opt/homebrew/include LIBPATH=/opt/homebrew/lib`
+  `make clean && make -j8`
+
+  This will build Fulcrum and link it with `rocksdb` from Homebrew as
+  it was installed in step 1. If you do not do this you will get errors like:
+
+  ```
+ld: warning: ignoring file /Users/marius/p/Fulcrum/staticlibs/rocksdb/bin/osx/librocksdb.a, building for macOS-arm64 but attempting to link with file built for macOS-x86_64
+Undefined symbols for architecture arm64:
+  "rocksdb::WriteBatch::WriteBatch(unsigned long, unsigned long)", referenced from:
+      Storage::UTXOBatch::UTXOBatch(Storage::UTXOCache*) in Storage.o
+      Storage::UTXOBatch::UTXOBatch(Storage::UTXOCache*) in Storage.o
+      Storage::addBlock(std::__1::shared_ptr<PreProcessedBlock>, bool, unsigned int, bool) in Storage.o
+      ```
+  The error indicates that for some reason `rocksdb` was compiled as
+  an Intel exectuable (which will not work, we're on Apple Silicon
+  here). Since it was easy to link it with the Homebrew build of
+  rocksdb I did not dig into this.
